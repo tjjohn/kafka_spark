@@ -4,10 +4,10 @@ from pyspark.sql.functions import *
 from pyspark.sql.types import *
 from pyspark.sql.functions import from_json
 from pyspark.sql.types import StructType, StructField, BooleanType, LongType, IntegerType, StringType
-
+from pyspark.sql import functions as f
 kafka_topic_name = "coin"
 kafka_bootstrap_servers = 'localhost:9092'
-
+#https://databricks.com/blog/2017/02/23/working-complex-data-formats-structured-streaming-apache-spark-2-1.html
 if __name__ == "__main__":
     print(" Data Processing  Started ...")
     # session for specfic users
@@ -35,17 +35,16 @@ if __name__ == "__main__":
     #got the dstream
     print("schema of dstream")
     df.printSchema()  # schema of dataframe consists of key, value,offset,topic  where  value is the actual message
-    # defineing a schema based on json we about get
-    schema = StructType([
-        StructField("rsvp_id", IntegerType()),
-        StructField("mtime", IntegerType()),
-        StructField("guests", IntegerType())
-    ])
-
-
 
     #change datatype of dataframe
-    df1 = df.selectExpr( "CAST(value AS string)","CAST(timestamp AS TIMESTAMP)")
+    df1 = df.selectExpr( "CAST(value AS string)")
+    print("-------------",type(df1))
+
+    # defineing a schema based on json we about get
+    schema = StructType(
+        [StructField("currancy", StringType()),
+         StructField("volume", StringType())
+         ])
     #changing column name of value and integrating with schema
     df2 = df1.select(from_json(col("value"), schema).alias("new_value"))
     print("\n schema of dataframe after taking VALUE from dstream")
@@ -54,32 +53,32 @@ if __name__ == "__main__":
     #getting all json message by columwise.....inner structure  not displayed..so if needed to split that column(important)
     df3 = df2.select("new_value.*")
 
-    #flatten the json structure
-    df4 = df3.select(["rsvp_id", \
-    "mtime", \
-    "guests"])
 
-    #type is column
-    print("\ntype of  df['guests']",df4['guests'])
+    #flatten the json structure or it automactically flatten structre if simple given
+    # df4 = df3.select(["currancy", \
+    #  "volume"])
 
-    ######operations#######
-    #select
-    #df4 = df4.select("guests").where("guests > 1")
+    # #type is column
+    # print("\ntype of  df['guests']",df4['guests'])
+    #
+    # ######operations#######
+    # #select
 
-    #filtering
-    #df4=df4.filter(df4["guests"]>0)
-
-
-    #groupby
-    #df4=df4.groupBy("rsvp_id").agg(fn.sum('guests').alias('total_guests'))
-    # df4=df4.groupBy("rsvp_id").count()
-
-    #temporary view and then apply SQL commands
-    df4.createOrReplaceTempView("Temptable")
-    df5=spark.sql("select * from Temptable")  ## returns another streaming DF
-
+    #
+    # #filtering
+    # #df4=df4.filter(df4["guests"]>0)
+    #
+    #
+    # #groupby
+    # #df4=df4.groupBy("rsvp_id").agg(fn.sum('guests').alias('total_guests'))
+    # # df4=df4.groupBy("rsvp_id").count()
+    #
+    # #temporary view and then apply SQL commands
+    # df4.createOrReplaceTempView("Temptable")
+    # df5=spark.sql("select * from Temptable")  ## returns another streaming DF
+    df1=df1.select(f.collect_list("currancy").alias("currancy"))
     #sinking
-    stream1=df5 \
+    stream1=df1 \
         .writeStream \
         .trigger(processingTime='5 seconds') \
         .outputMode("update") \

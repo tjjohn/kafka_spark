@@ -3,9 +3,10 @@ import requests
 from kafka import KafkaProducer
 from json import dumps
 import json
+#cd C:/Users/"tj john"/Desktop/"Self project"/Kafka_Spark
 
 
-api_url = "http://stream.meetup.com/2/rsvps"
+api_url = "https://c4kjb24frb.execute-api.ap-south-1.amazonaws.com/Scrapped_data"
 
 kafka_topic_name = "coin"
 kafka_bootstrap_servers = 'localhost:9092'
@@ -19,7 +20,7 @@ if __name__ == "__main__":
     while True:  #infinite loop
         try:
             stream_api_response = requests.get(api_url, stream=True)
-            if stream_api_response.status_code != 200:
+            if stream_api_response.status_code == 200:
                 for api_response_message in stream_api_response.iter_lines():
                     print("Message received: ")
                     print(api_response_message)
