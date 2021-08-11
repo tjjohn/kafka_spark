@@ -4,7 +4,6 @@
     <list default="true" id="5681750d-30ff-4904-9243-da88e90a9571" name="Default Changelist" comment="">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/consumer_spark.py" beforeDir="false" afterPath="$PROJECT_DIR$/consumer_spark.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/producer.py" beforeDir="false" afterPath="$PROJECT_DIR$/producer.py" afterDir="false" />
     </list>
     <option name="EXCLUDED_CONVERTED_TO_IGNORED" value="true" />
     <option name="SHOW_DIALOG" value="false" />
@@ -18,7 +17,7 @@
   <component name="ProjectId" id="1wXrzBesqU1rKx8ICjt9Y6u9u5G" />
   <component name="PropertiesComponent">
     <property name="SHARE_PROJECT_CONFIGURATION_FILES" value="true" />
-    <property name="last_opened_file_path" value="$PROJECT_DIR$" />
+    <property name="last_opened_file_path" value="$PROJECT_DIR$/../cryptocurrancy" />
   </component>
   <component name="RunDashboard">
     <option name="ruleStates">

@@ -3,17 +3,17 @@ from pyspark.sql import SparkSession
 from pyspark.sql.functions import *
 from pyspark.sql.types import *
 from pyspark.sql.functions import from_json
-from pyspark.sql.types import StructType, StructField, BooleanType, LongType, IntegerType, StringType
-from pyspark.sql import functions as f
+from pyspark.sql.types import ArrayType,StructType, StructField, BooleanType, LongType, IntegerType, StringType
+
+
 kafka_topic_name = "coin"
 kafka_bootstrap_servers = 'localhost:9092'
-#https://databricks.com/blog/2017/02/23/working-complex-data-formats-structured-streaming-apache-spark-2-1.html
 if __name__ == "__main__":
     print(" Data Processing  Started ...")
     # session for specfic users
     spark = SparkSession \
         .builder \
-        .appName("Spark Structured Streaming with Kafka and Message Format as JSON") \
+        .appName(" Spark Structured Streaming with Kafka and Message Format as JSON") \
         .master("local[*]") \
         .config("spark.jars", "file:///C://spark_dependency_jars//commons-pool2-2.8.1.jar,file:///C://spark_dependency_jars//spark-sql-kafka-0-10_2.12-3.0.1.jar,file:///C://spark_dependency_jars//kafka-clients-2.6.0.jar,file:///C://spark_dependency_jars//spark-streaming-kafka-0-10-assembly_2.12-3.0.1.jar") \
         .config("spark.executor.extraClassPath","file:///C://spark_dependency_jars//commons-pool2-2.8.1.jar:file:///C://spark_dependency_jars//spark-sql-kafka-0-10_2.12-3.0.1.jar:file:///C://spark_dependency_jars//kafka-clients-2.6.0.jar:file:///C://spark_dependency_jars//spark-streaming-kafka-0-10-assembly_2.12-3.0.1.jar") \
@@ -31,54 +31,67 @@ if __name__ == "__main__":
         .option("subscribe", kafka_topic_name) \
         .option("startingOffsets", "latest") \
         .load()
+
+
+    #https://databricks.com/blog/2017/02/23/working-complex-data-formats-structured-streaming-apache-spark-2-1.html
+
     # starting offset -> latest messages
     #got the dstream
     print("schema of dstream")
     df.printSchema()  # schema of dataframe consists of key, value,offset,topic  where  value is the actual message
 
-    #change datatype of dataframe
+    #extraact only message & change its datatype
     df1 = df.selectExpr( "CAST(value AS string)")
-    print("-------------",type(df1))
+    print("\n datatype of extracted message is ",type(df1))
+    print("schema is ")
+    df1.printSchema()
+
 
     # defineing a schema based on json we about get
-    schema = StructType(
-        [StructField("currancy", StringType()),
+    schema = ArrayType(StructType([
+        StructField("currancy", StringType()),
          StructField("volume", StringType())
-         ])
+         ]) )
+
+
     #changing column name of value and integrating with schema
     df2 = df1.select(from_json(col("value"), schema).alias("new_value"))
-    print("\n schema of dataframe after taking VALUE from dstream")
+    print("\n schema of dataframe after combining manual StructType")
+
     df2.printSchema()
 
-    #getting all json message by columwise.....inner structure  not displayed..so if needed to split that column(important)
-    df3 = df2.select("new_value.*")
+
+    # explode() can be used to create a new row for each element in an array or each key-value pair
+
+    df3=df2.select(explode("new_value").alias("new_value1"))
+
+    df3.printSchema()
 
 
-    #flatten the json structure or it automactically flatten structre if simple given
-    # df4 = df3.select(["currancy", \
-    #  "volume"])
 
-    # #type is column
-    # print("\ntype of  df['guests']",df4['guests'])
-    #
-    # ######operations#######
-    # #select
+    #flatten the json structure or it automactically flatten structre
+    df4 = df3.select(["new_value1.currancy", \
+      "new_value1.volume"])
 
-    #
-    # #filtering
-    # #df4=df4.filter(df4["guests"]>0)
-    #
-    #
-    # #groupby
-    # #df4=df4.groupBy("rsvp_id").agg(fn.sum('guests').alias('total_guests'))
-    # # df4=df4.groupBy("rsvp_id").count()
-    #
-    # #temporary view and then apply SQL commands
-    # df4.createOrReplaceTempView("Temptable")
-    # df5=spark.sql("select * from Temptable")  ## returns another streaming DF
-    df1=df1.select(f.collect_list("currancy").alias("currancy"))
+    df4=df4.withColumn("Volume", regexp_replace("volume", "BTC", ""))
+    df4 = df4.withColumn("Volume", regexp_replace("Volume", " ", ""))
+
+    df4 = df4.withColumnRenamed("Currancy", "currancy")
+
+
+
+    df4 = df4.selectExpr("CAST(Volume AS Float)","CAST(Currancy AS string)")
+
+    #df4=df4.filter(df4["Volume"]>50)
+
+
+
+    df4.createOrReplaceTempView("Temptable")
+
+    df5=spark.sql("select  Currancy,max(Volume) as Max_Volume from Temptable group by Currancy having Max_Volume>100  ")
+
     #sinking
-    stream1=df1 \
+    stream1=df5 \
         .writeStream \
         .trigger(processingTime='5 seconds') \
         .outputMode("update") \
